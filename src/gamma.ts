@@ -74,6 +74,26 @@ export async function getUserFromGamma(
   };
 }
 
+export function profileUrl({ gammaLocalUrl }: Options) {
+  return gammaLocalUrl + GAMMA_PROFILE_PATH;
+}
+
+export function authorizationUrl({ gammaUrl, clientId, redirectUrl }: Options) {
+  const url = new URL(gammaUrl + GAMMA_AUTH_PATH);
+  url.searchParams.append("response_type", "code");
+  url.searchParams.append("client_id", clientId);
+  url.searchParams.append("redirect_uri", redirectUrl);
+  return url.toString();
+}
+
+export function tokenUrl(code: string, { gammaLocalUrl, redirectUrl }: Options) {
+  const url = new URL(gammaLocalUrl + GAMMA_TOKEN_PATH);
+  url.searchParams.set("grant_type", "authorization_code");
+  url.searchParams.set("redirect_uri", redirectUrl);
+  url.searchParams.set("code", code);
+  return url.toString();
+}
+
 function authorizationHeader({ clientId, clientSecret }: Options) {
   return `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString(
     "base64"
@@ -82,24 +102,4 @@ function authorizationHeader({ clientId, clientSecret }: Options) {
 
 function tokenBearerHeader(accessToken: string) {
   return `Bearer ${accessToken}`;
-}
-
-function profileUrl({ gammaLocalUrl }: Options) {
-  return gammaLocalUrl + GAMMA_PROFILE_PATH;
-}
-
-function authorizationUrl({ gammaUrl, clientId, redirectUrl }: Options) {
-  const url = new URL(gammaUrl + GAMMA_AUTH_PATH);
-  url.searchParams.append("response_type", "code");
-  url.searchParams.append("client_id", clientId);
-  url.searchParams.append("redirect_uri", redirectUrl);
-  return url.toString();
-}
-
-function tokenUrl(code: string, { gammaLocalUrl, redirectUrl }: Options) {
-  const url = new URL(gammaLocalUrl + GAMMA_TOKEN_PATH);
-  url.searchParams.set("grant_type", "authorization_code");
-  url.searchParams.set("redirect_uri", redirectUrl);
-  url.searchParams.set("code", code);
-  return url.toString();
 }
