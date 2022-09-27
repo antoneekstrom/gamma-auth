@@ -1,3 +1,3 @@
 export * from "./gamma"
 export * from "./express"
-export * from "./passport"
+// export * from "./passport"
