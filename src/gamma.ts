@@ -6,44 +6,54 @@ export const GAMMA_TOKEN_PATH = "/api/oauth/token";
 export const GAMMA_PROFILE_PATH = "/api/users/me";
 
 /**
- * 
+ * An object with properties neccecary to make requests to gamma.
  */
-export type Options = {
+export type GammaAuthOptions = {
+  /**
+   * The client id of the application.
+   */
   clientId: string;
+  /**
+   * The client secret of the application.
+   */
   clientSecret: string;
-  clientHost: string;
-  redirectPath: string;
-  redirectUrl: string;
+  /**
+   * The URI that gamma redirects to when returning the access token.
+   */
+  redirectUri: string;
+  /**
+   * The base URL of gamma.
+   */
   gammaUrl: string;
-  gammaLocalUrl: string;
+  /**
+   * The local URL of gamma, used if you are running gamma inside a docker stack.
+   */
+  gammaLocalUrl?: string;
 };
 
-/**
- * 
- */
 export type GammaUser = {
   cid: string;
-  groups: { superGroup: { name: string; type: string } }[];
+  groups: GammaGroup[];
   language?: "en" | "sv";
 };
 
-/**
- * 
- * @param res 
- * @param options 
- */
-export function redirectToGammaLogin(res: Response, options: Options) {
+export type GammaSuperGroup = {
+  name: string;
+  type: string;
+};
+
+export type GammaGroup = {
+  name?: string;
+  type?: string;
+  superGroup: GammaSuperGroup;
+};
+
+export function redirectToGammaLogin(res: Response, options: GammaAuthOptions) {
   const url = authorizationUrl(options);
   res.redirect(url);
 }
 
-/**
- * 
- * @param code 
- * @param options 
- * @returns 
- */
-export async function getAccessToken(code: string, options: Options) {
+export async function getAccessToken(code: string, options: GammaAuthOptions) {
   const url = tokenUrl(code, options);
   const { data } = await axios.post(url, null, {
     headers: {
@@ -53,15 +63,9 @@ export async function getAccessToken(code: string, options: Options) {
   return data.access_token;
 }
 
-/**
- * 
- * @param accessToken 
- * @param options 
- * @returns 
- */
 export async function getUserFromGamma(
   accessToken: string,
-  options: Options
+  options: GammaAuthOptions
 ): Promise<GammaUser | undefined> {
   const response = await axios.get<GammaUser>(profileUrl(options), {
     headers: {
@@ -74,11 +78,15 @@ export async function getUserFromGamma(
   };
 }
 
-export function profileUrl({ gammaLocalUrl }: Options) {
+export function profileUrl({ gammaLocalUrl }: GammaAuthOptions) {
   return gammaLocalUrl + GAMMA_PROFILE_PATH;
 }
 
-export function authorizationUrl({ gammaUrl, clientId, redirectUrl }: Options) {
+export function authorizationUrl({
+  gammaUrl,
+  clientId,
+  redirectUri: redirectUrl,
+}: GammaAuthOptions) {
   const url = new URL(gammaUrl + GAMMA_AUTH_PATH);
   url.searchParams.append("response_type", "code");
   url.searchParams.append("client_id", clientId);
@@ -86,7 +94,10 @@ export function authorizationUrl({ gammaUrl, clientId, redirectUrl }: Options) {
   return url.toString();
 }
 
-export function tokenUrl(code: string, { gammaLocalUrl, redirectUrl }: Options) {
+export function tokenUrl(
+  code: string,
+  { gammaLocalUrl, redirectUri: redirectUrl }: GammaAuthOptions
+) {
   const url = new URL(gammaLocalUrl + GAMMA_TOKEN_PATH);
   url.searchParams.set("grant_type", "authorization_code");
   url.searchParams.set("redirect_uri", redirectUrl);
@@ -94,7 +105,7 @@ export function tokenUrl(code: string, { gammaLocalUrl, redirectUrl }: Options) 
   return url.toString();
 }
 
-function authorizationHeader({ clientId, clientSecret }: Options) {
+function authorizationHeader({ clientId, clientSecret }: GammaAuthOptions) {
   return `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString(
     "base64"
   )}`;

@@ -3,7 +3,7 @@ import session, { MemoryStore } from "express-session";
 import cors from "cors";
 import {
   GammaUser,
-  Options,
+  GammaAuthOptions,
   getAccessToken,
   getUserFromGamma,
   redirectToGammaLogin,
@@ -15,23 +15,32 @@ declare module "express-session" {
   }
 }
 
+export type GammaExpressOptions = {
+  /**
+   * The path to redirect to after a successful login (or logout).
+   */
+  hostUrl: string;
+  /**
+   * The path that accepts the callback redirect from gamma.
+   */
+  redirectPath: string;
+};
+
 export const LOGIN_PATH = "/api/auth/login";
 export const LOGOUT_PATH = "/api/auth/logout";
 
-/**
- *
- * @param app
- * @param options
- */
-export function configureGammaAuth(app: Application, options: Options) {
-  configureGammaAuthCors(app, options.clientHost);
+export function configureGammaAuth(
+  app: Application,
+  options: GammaAuthOptions & GammaExpressOptions
+) {
+  configureGammaAuthCors(app, options.hostUrl);
   configureGammaAuthSession(app, options);
   configureGammaAuthRoutes(app, options);
 }
 
 function configureGammaAuthSession(
   app: Application,
-  { clientSecret }: Options
+  { clientSecret }: GammaAuthOptions
 ) {
   app.use(
     session({
@@ -43,7 +52,10 @@ function configureGammaAuthSession(
   );
 }
 
-function configureGammaAuthRoutes(app: Application, options: Options) {
+function configureGammaAuthRoutes(
+  app: Application,
+  options: GammaAuthOptions & GammaExpressOptions
+) {
   redirectRoute(app, options);
   loginRoute(app, options);
   logoutRoute(app, options);
@@ -58,7 +70,10 @@ function configureGammaAuthCors(app: Application, origin: string) {
   );
 }
 
-function redirectRoute(app: Application, options: Options) {
+function redirectRoute(
+  app: Application,
+  options: GammaAuthOptions & GammaExpressOptions
+) {
   const { redirectPath } = options;
 
   app.get(redirectPath, async (req, res) => {
@@ -77,18 +92,18 @@ function redirectRoute(app: Application, options: Options) {
       res.status(400).send("No user found");
     }
 
-    redirectToClientHost(res, options.clientHost);
+    redirectToClientHost(res, options.hostUrl);
   });
 }
 
-function loginRoute(app: Application, options: Options) {
+function loginRoute(app: Application, options: GammaAuthOptions) {
   app.get(LOGIN_PATH, (_, res) => redirectToGammaLogin(res, options));
 }
 
-function logoutRoute(app: Application, options: Options) {
+function logoutRoute(app: Application, options: GammaExpressOptions) {
   app.get(LOGOUT_PATH, (req, res) => {
     deleteUserFromSession(req);
-    redirectToClientHost(res, options.clientHost);
+    redirectToClientHost(res, options.hostUrl);
   });
 }
 
